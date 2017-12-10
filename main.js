@@ -13,11 +13,12 @@ var medianIncome = d3.map();
 
 var projection = d3.geoAlbersUsa();
 
-var radius = d3.scaleSqrt();
+var radius = d3.scaleSqrt()
+                .range([15,40]);
 
-// var color = d3.scaleQuantize()
-var color = d3.scaleOrdinal(d3.schemeCategory10);
 
+var color = d3.scaleQuantize()
+              .range(d3.schemeBlues[5]);
 
 var simulation;
 
@@ -31,18 +32,12 @@ d3.queue()
   })
   .await(main);
 
-// console.log("hello", totalPop)
-// console.log("hello world?")
-
 function main(error, us) {
     if (error) throw error;
-    //console.log(us);
     console.log(totalPop.values())
     var nodes = us.features.map(function(d) {
-      //console.log("d", d)
     var point = projection(d.geometry.coordinates),
         value = totalPop.get(d.properties.name)
-        //console.log('value', value)
 
     return {
       id: d.id,
@@ -58,21 +53,27 @@ function main(error, us) {
     };
   });
 
-  //console.log('nodes', nodes)
 
-  var categories = ["1000", "700000", "15M to 23M", "23M to 31M", "31M to 38M"]
-
-  var numCategories = categories.length;
+  // var categories = ["0 to 7M", "7M to 15M", "15M to 23M", "23M to 31M", "31M to 38M"]
+  //
+  // var numCategories = categories.length;
 
   // color.domain(categories)
   //   .range(categories.map(function(d, i) {
   //     return d3.interpolateYlGnBu(i / (numCategories - 1));
   //   }));
 
+  var extent = d3.extent(nodes, function(d) {
+    return d.value;
+  });
+
+  radius.domain(extent);
+  color.domain(extent)
+
   simulation = d3.forceSimulation(nodes)
     .force('charge', d3.forceManyBody().strength(1))
-    .force('collide', d3.forceCollide().strength(1).radius(function(d) {
-          return d.r;
+    .force('collision', d3.forceCollide().strength(1).radius(function(d) {
+          return radius(d.value);
       }))
     .stop();
 
@@ -90,14 +91,11 @@ function main(error, us) {
       })
       .enter();
 
-      //console.log(nodes[0].r)
-
 
     bubbles.append('circle')
-      //.merge(bubbles)
+      // .merge(bubbles)
       .attr('r', function(d) {
-        //console.log("r d", d)
-        return radius(d.r);
+        return radius(d.value);
       })
       .attr('cx', function(d) {
         return d.x;
@@ -106,7 +104,7 @@ function main(error, us) {
         return d.y;
       })
       .attr('fill', function(d) {
-        return color(d.v);
+        return color(d.value);
       })
       .attr('stroke', '#333')
       .on('mouseover', function(d) {
