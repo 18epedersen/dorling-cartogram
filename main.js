@@ -34,7 +34,6 @@ d3.queue()
 
 function main(error, us) {
     if (error) throw error;
-    console.log(totalPop.values())
     var nodes = us.features.map(function(d) {
     var point = projection(d.geometry.coordinates),
         value = totalPop.get(d.properties.name)
@@ -54,15 +53,6 @@ function main(error, us) {
   });
 
 
-  // var categories = ["0 to 7M", "7M to 15M", "15M to 23M", "23M to 31M", "31M to 38M"]
-  //
-  // var numCategories = categories.length;
-
-  // color.domain(categories)
-  //   .range(categories.map(function(d, i) {
-  //     return d3.interpolateYlGnBu(i / (numCategories - 1));
-  //   }));
-
   var extent = d3.extent(nodes, function(d) {
     return d.value;
   });
@@ -71,79 +61,100 @@ function main(error, us) {
   color.domain(extent)
 
   simulation = d3.forceSimulation(nodes)
-    .force('charge', d3.forceManyBody().strength(1))
-    .force('collision', d3.forceCollide().strength(1).radius(function(d) {
-          return radius(d.value);
-      }))
-    .stop();
+                  .force('charge', d3.forceManyBody().strength(1))
+                  // .force('center', d3.forceCenter(width / 2, height / 2))
+                  .force('collision', d3.forceCollide().strength(1).radius(function(d) {
+                    return radius(d.value)
+                  }))
+                  .on('tick', ticked)
 
-  // for (var i = 0; i < 150; i++) {
-  //   simulation.tick();
-  // }
-  ticked();
+  var bubbles = svg.append('g')
+                  .selectAll('circle')
+                  .data(nodes)
+                  .enter()
+                  .append('circle')
+                  .attr('r', function(d){
+                    return radius(d.value)
+                  })
+                  .attr('cx', function(d) {
+                    return d.x0
+                  })
+                  .attr('cy', function(d) {
+                    return d.y0
+                  })
+                  .attr('fill', function(d) {
+                    return color(d.value)
+                  })
+  var text = svg.selectAll("text")
+                .data(nodes)
+                .enter()
+                .append('text')
+                .attr("x", function(d){ return d.x0; })
+                .attr("y", function(d){ return d.y0; })
+                .attr("text-anchor", "middle")
+                .text(function(d){ return d.label; })
+                .style({
+                    "fill":"black",
+                    "font-family":"lato",
+                    "font-size": "12px"
+                });
 
-  function ticked() {
-    var bubbles = svg.append('g')
-      .selectAll('circle')
-      .data(nodes, function(d) {
-        console.log(d)
-        return d.label;
-      })
-      .enter();
-
-
-    bubbles.append('circle')
-      // .merge(bubbles)
-      .attr('r', function(d) {
-        return radius(d.value);
-      })
-      .attr('cx', function(d) {
-        return d.x;
-      })
-      .attr('cy', function(d) {
-        return d.y;
-      })
-      .attr('fill', function(d) {
-        return color(d.value);
-      })
-      .attr('stroke', '#333')
-      .on('mouseover', function(d) {
-        tooltip.html(d.name + "<br>" + "Total population:" + d.value);
-        tooltip.style('visibility', 'visible');
-        d3.select(this).attr('stroke', 'white');
-      })
-      .on('mousemove', function() {
-        tooltip.style('top', (d3.event.pageY - 10) + 'px')
-          .style('left', (d3.event.pageX + 10) + 'px');
-      })
-      .on('mouseout', function() {
-        tooltip.style('visibility', 'hidden');
-        d3.select(this).attr('stroke', '#333');
-      });
-
-      bubbles.append("text")
-          .attr("x", function(d){ return d.x; })
-          .attr("y", function(d){ return d.y + 5; })
-          .attr("text-anchor", "middle")
-          .text(function(d){ return d.label; })
-          .style({
-              "fill":"black",
-              "font-family":"lato",
-              "font-size": "12px"
-          });
-  }
-  svg.append('g')
-      .attr('class', 'legend')
-      .attr('transform', 'translate(0, 400)');
-
-    legend = d3.legendColor()
-      .title('Total Population:')
-      .titleWidth(75)
-      .scale(color);
-
-    svg.select('.legend')
-      .call(legend);
 }
+
+function ticked() {
+  console.log('ticked is called')
+  var bubbles =  svg.selectAll('circle')
+                    .attr('r', function(d){
+                      return radius(d.value)
+                    })
+                    .attr('cx', function(d) {
+                      return d.x
+                    })
+                    .attr('cy', function(d) {
+                      return d.y
+                    })
+                    .attr('fill', function(d) {
+                      return color(d.value)
+                    })
+                    .attr('stroke', '#333')
+                    .on('mouseover', function(d) {
+                      tooltip.html(d.name + "<br>" + "Total population:" + d.value);
+                      tooltip.style('visibility', 'visible');
+                      d3.select(this).attr('stroke', 'white');
+                    })
+                    .on('mousemove', function() {
+                      tooltip.style('top', (d3.event.pageY - 10) + 'px')
+                        .style('left', (d3.event.pageX + 10) + 'px');
+                    })
+                    .on('mouseout', function() {
+                      tooltip.style('visibility', 'hidden');
+                      d3.select(this).attr('stroke', '#333');
+                    });
+
+    var text = svg.selectAll("text")
+                  .attr("x", function(d){ return d.x; })
+                  .attr("y", function(d){ return d.y; })
+                  // .attr("text-anchor", "middle")
+                  .text(function(d){ return d.label; })
+                  .style({
+                      "fill":"black",
+                      "font-family":"lato",
+                      "font-size": "12px"
+                  });
+
+    svg.append('g')
+        .attr('class', 'legend')
+        .attr('transform', 'translate(10, 450)');
+
+      legend = d3.legendColor()
+        .title('Total Population:')
+        .titleWidth(75)
+        .scale(color);
+
+      svg.select('.legend')
+        .call(legend);
+}
+
 
 var tooltip = d3.select('body')
   .append('div')
