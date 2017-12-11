@@ -20,6 +20,8 @@ var radius = d3.scaleSqrt()
 var color = d3.scaleQuantize()
               .range(d3.schemeBlues[5]);
 
+var isTotalPop = true
+
 var simulation;
 
 var legend;
@@ -146,14 +148,89 @@ function ticked() {
         .attr('class', 'legend')
         .attr('transform', 'translate(10, 450)');
 
+    if (!(isTotalPop)) {
+      legend = d3.legendColor()
+        .title('Median Income:')
+        .titleWidth(75)
+        .scale(color);
+    } else {
       legend = d3.legendColor()
         .title('Total Population:')
         .titleWidth(75)
         .scale(color);
+    }
 
       svg.select('.legend')
         .call(legend);
+
+    if (isTotalPop) {
+      console.log('entered is in ticked')
+      //  window.onload = function() {
+      console.log('hi we entered here')
+      document.getElementById("myBtn").value = "Median Income";
+      // }
+    }
+
+    if (!(isTotalPop)) {
+      console.log('entered ! in ticked')
+      // window.onload = function() {
+        console.log('entered here')
+        document.getElementById("myBtn").value = "Total Population";
+
+    }
 }
+
+function update() {
+  isTotalPop = !(isTotalPop)
+  console.log('total pop is', isTotalPop)
+  var min_val = Number.MAX_VALUE;
+  var max_val = Number.MIN_VALUE;
+  if (!(isTotalPop)) {
+    d3.selectAll('circle').data()
+    .forEach(function(d) {
+      d.value = medianIncome.get(d.name)
+      if (d.value < min_val) {
+        min_val = d.value
+      }
+      if (d.value > max_val) {
+        max_val = d.value
+      }
+    })
+
+    radius.domain([min_val, max_val]);
+    color.domain([min_val, max_val])
+  } else {
+    d3.selectAll('circle').data()
+    .forEach(function(d) {
+      d.value = totalPop.get(d.name)
+      if (d.value < min_val) {
+        min_val = d.value
+      }
+      if (d.value > max_val) {
+        max_val = d.value
+      }
+    })
+    radius.domain([min_val, max_val]);
+    color.domain([min_val, max_val]);
+  }
+  simulation.nodes(svg.selectAll('circle').data()).alpha(1).restart();
+  for (var i = 0; i < 150; i++) {
+    simulation.tick();
+  }
+  ticked();
+}
+// if (isTotalPop) {
+//    window.onload = function() {
+//   console.log('hi we entered here')
+//   document.getElementById("myBtn").value = "Median Income";
+//   }
+// } else {
+//   window.onload = function() {
+//     console.log('entered here')
+//     document.getElementById("myBtn").value = "Total Population";
+//   }
+// }
+
 
 
 var tooltip = d3.select('body')
