@@ -1,31 +1,42 @@
-
+// initialize the width and height of the svg
 var width = 1200,
     height = 600;
 
+//initialize the svg with the width and height
 var svg = d3.select('body')
   .append('svg')
   .attr('width', width)
   .attr('height', height);
 
+// initialize the map for the name, total pop values
 var totalPop = d3.map();
 
+// initialize the map for the name, median income values
 var medianIncome = d3.map();
 
+// initialize the projection
 var projection = d3.geoAlbersUsa();
 
+// initialize the radius and it's radius
 var radius = d3.scaleSqrt()
                 .range([15,40]);
 
-
+// initialize the color function and it's range
 var color = d3.scaleQuantize()
               .range(d3.schemeBlues[5]);
 
+// set isTotalPop to be true so that's the first thing you see on the landing page
 var isTotalPop = true
 
+// global variable for simulation
 var simulation;
 
+// global variable for legend
 var legend;
 
+var word;
+
+// load data asynchronously and set the key value pairs for totalPop and medianIncome
 d3.queue()
   .defer(d3.json, 'data/us-states-centroids.json')
   .defer(d3.csv, 'data/acs_pop_income.csv', function(d) {
@@ -34,8 +45,11 @@ d3.queue()
   })
   .await(main);
 
+// main function which will initialize the nodes, set up the domains for radius and color, initialize the simulation
+// and initialize the positions for the bubbles and text
 function main(error, us) {
     if (error) throw error;
+    // pre define array of nodes using projection
     var nodes = us.features.map(function(d) {
     var point = projection(d.geometry.coordinates),
         value = totalPop.get(d.properties.name)
@@ -54,22 +68,24 @@ function main(error, us) {
     };
   });
 
-
+  // array of the min and max values of the d.value to be used for radius and color
   var extent = d3.extent(nodes, function(d) {
     return d.value;
   });
 
+  // setting up the radius' and color's domains
   radius.domain(extent);
   color.domain(extent)
 
+  // initialize simulation with charge and collision, which will call the ticked function
   simulation = d3.forceSimulation(nodes)
                   .force('charge', d3.forceManyBody().strength(1))
-                  // .force('center', d3.forceCenter(width / 2, height / 2))
                   .force('collision', d3.forceCollide().strength(1).radius(function(d) {
                     return radius(d.value)
                   }))
                   .on('tick', ticked)
 
+  // initializing the locations of the bubbles as x0, and y0
   var bubbles = svg.append('g')
                   .selectAll('circle')
                   .data(nodes)
@@ -87,6 +103,7 @@ function main(error, us) {
                   .attr('fill', function(d) {
                     return color(d.value)
                   })
+  // initializing the positions of the text using x0 and y0
   var text = svg.selectAll("text")
                 .data(nodes)
                 .enter()
@@ -102,9 +119,23 @@ function main(error, us) {
                 });
 
 }
-
+// ticked function to move the bubbles
 function ticked() {
-  console.log('ticked is called')
+
+  //if isTotalPop is true, then set the toggle button to be median income and the word in the hover to be Total Population
+  if (isTotalPop) {
+    document.getElementById("myBtn").value = "Median Income";
+    word = "Total population:"
+  }
+
+  //if isTotalPop is false, then set the toggle button to be total population and the word in the hover to be Median Income
+  if (!(isTotalPop)) {
+      document.getElementById("myBtn").value = "Total Population";
+      word = "Median Income:"
+
+  }
+
+  // update the position of the bubbles to x and y
   var bubbles =  svg.selectAll('circle')
                     .attr('r', function(d){
                       return radius(d.value)
@@ -120,7 +151,7 @@ function ticked() {
                     })
                     .attr('stroke', '#333')
                     .on('mouseover', function(d) {
-                      tooltip.html(d.name + "<br>" + "Total population:" + d.value);
+                      tooltip.html(d.name + "<br>" + word + d.value);
                       tooltip.style('visibility', 'visible');
                       d3.select(this).attr('stroke', 'white');
                     })
@@ -133,6 +164,7 @@ function ticked() {
                       d3.select(this).attr('stroke', '#333');
                     });
 
+    // update the position of the text to be x and y
     var text = svg.selectAll("text")
                   .attr("x", function(d){ return d.x; })
                   .attr("y", function(d){ return d.y; })
@@ -144,10 +176,12 @@ function ticked() {
                       "font-size": "12px"
                   });
 
+    // append the legend
     svg.append('g')
         .attr('class', 'legend')
         .attr('transform', 'translate(10, 450)');
 
+    // if median income is the view, have the title be median income, and vice versa
     if (!(isTotalPop)) {
       legend = d3.legendColor()
         .title('Median Income:')
@@ -160,31 +194,19 @@ function ticked() {
         .scale(color);
     }
 
+    // update the legend
       svg.select('.legend')
         .call(legend);
 
-    if (isTotalPop) {
-      console.log('entered is in ticked')
-      //  window.onload = function() {
-      console.log('hi we entered here')
-      document.getElementById("myBtn").value = "Median Income";
-      // }
-    }
-
-    if (!(isTotalPop)) {
-      console.log('entered ! in ticked')
-      // window.onload = function() {
-        console.log('entered here')
-        document.getElementById("myBtn").value = "Total Population";
-
-    }
 }
 
+// function to update the bubble chart after the user clicks on the toggle button
 function update() {
   isTotalPop = !(isTotalPop)
-  console.log('total pop is', isTotalPop)
+  // initial values so I can find the min and max to be later used for the domain of radius and color
   var min_val = Number.MAX_VALUE;
   var max_val = Number.MIN_VALUE;
+  // if median income, update value to be the value in median income
   if (!(isTotalPop)) {
     d3.selectAll('circle').data()
     .forEach(function(d) {
@@ -200,6 +222,7 @@ function update() {
     radius.domain([min_val, max_val]);
     color.domain([min_val, max_val])
   } else {
+    // update value to be total population for the state name
     d3.selectAll('circle').data()
     .forEach(function(d) {
       d.value = totalPop.get(d.name)
@@ -213,26 +236,15 @@ function update() {
     radius.domain([min_val, max_val]);
     color.domain([min_val, max_val]);
   }
+  // restart the simulation
   simulation.nodes(svg.selectAll('circle').data()).alpha(1).restart();
   for (var i = 0; i < 150; i++) {
     simulation.tick();
   }
+  // call ticked to move the bubbles
   ticked();
 }
-// if (isTotalPop) {
-//    window.onload = function() {
-//   console.log('hi we entered here')
-//   document.getElementById("myBtn").value = "Median Income";
-//   }
-// } else {
-//   window.onload = function() {
-//     console.log('entered here')
-//     document.getElementById("myBtn").value = "Total Population";
-//   }
-// }
-
-
-
+// initialize tooltip
 var tooltip = d3.select('body')
   .append('div')
   .style('position', 'absolute')
