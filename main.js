@@ -182,13 +182,14 @@ function ticked() {
         .attr('transform', 'translate(10, 450)');
 
     // if median income is the view, have the title be median income, and vice versa
+    // also used a label formatter to make the legend look nice
     if (!(isTotalPop)) {
-      legend = d3.legendColor()
+      legend = d3.legendColor().labelFormat(d3.format(".2s"))
         .title('Median Income:')
         .titleWidth(75)
         .scale(color);
     } else {
-      legend = d3.legendColor()
+      legend = d3.legendColor().labelFormat(d3.format(".2s"))
         .title('Total Population:')
         .titleWidth(75)
         .scale(color);
